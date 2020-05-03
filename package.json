@@ -1,0 +1,31 @@
+{
+  "name": "fx-record-ts-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "installMixer": "cd Libs/LicsonMixer/mixer && node-gyp configure build",
+    "lint": "tslint --project .",
+    "build": "tsc --pretty",
+    "build:prod": "tsc --pretty --sourceMap false"
+  },
+  "author": "Jim Chen <jimchen5209@gmail.com>",
+  "license": "AGPL-3.0-only",
+  "description": "",
+  "dependencies": {
+    "eris": "^0.12.0",
+    "ffmpeg-static": "^4.2.0",
+    "moment": "^2.24.0",
+    "moment-timezone": "^0.5.28",
+    "nan": "^2.14.1",
+    "node-gyp": "^6.1.0",
+    "node-opus": "^0.3.3",
+    "node-telegram-bot-api": "^0.40.0",
+    "typescript-logging": "^0.6.4"
+  },
+  "devDependencies": {
+    "@types/moment-timezone": "^0.5.13",
+    "@types/node-telegram-bot-api": "^0.40.3",
+    "tslint": "^6.1.2",
+    "typescript": "^3.8.3"
+  }
+}

@@ -19,7 +19,7 @@ export class DiscordVoice {
     private userRawPCMStreams: { [key: string]: Stream.PassThrough } = {};
     private userRawMP3Streams: { [key: string]: Stream.PassThrough } = {};
     private userMP3Buffers: { [key: string]: any[] } = {};
-    private telegamSendInterval: NodeJS.Timeout | undefined;
+    private telegramSendInterval: NodeJS.Timeout | undefined;
 
     constructor(
         core: Core,
@@ -87,7 +87,7 @@ export class DiscordVoice {
                 mp3File.push(data);
             });
 
-            this.telegamSendInterval = setInterval(() => {
+            this.telegramSendInterval = setInterval(() => {
                 const mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
                 const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
                 const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}\n#channel${connection.channelID}`;
@@ -110,7 +110,7 @@ export class DiscordVoice {
         this.userRawMP3Streams = {};
         this.userMP3Buffers = {};
         connection.removeAllListeners();
-        if (this.telegamSendInterval !== undefined) clearInterval(this.telegamSendInterval);
+        if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
         this.bot.leaveVoiceChannel(connection.channelID);
     }
 

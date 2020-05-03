@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node --expose_gc dist",
     "installMixer": "cd Libs/LicsonMixer/mixer && node-gyp configure build",
     "lint": "tslint --project .",
     "build": "tsc --pretty",
@@ -12,7 +13,7 @@
   "license": "AGPL-3.0-only",
   "description": "",
   "dependencies": {
-    "eris": "^0.12.0",
+    "eris": "github:abalabahaha/eris#dev",
     "ffmpeg-static": "^4.2.0",
     "moment": "^2.24.0",
     "moment-timezone": "^0.5.28",

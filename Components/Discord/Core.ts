@@ -2,7 +2,7 @@ import { CommandClient } from 'eris';
 import { Category } from 'typescript-logging';
 import { Config } from '../../Core/Config';
 import { Core } from '../..';
-import { DiscordAudio } from './Components/Audio';
+import { DiscordVoice } from './Components/Voice';
 import { DiscordText } from './Components/Text';
 
 const ERR_MISSING_TOKEN = Error('Discord token missing');
@@ -11,7 +11,7 @@ export class Discord {
     private config: Config;
     private bot: CommandClient;
     private logger: Category;
-    public audios: { [key: string]: DiscordAudio } = {};
+    public audios: { [key: string]: DiscordVoice } = {};
 
     constructor(core: Core) {
         this.config = core.config;
@@ -28,7 +28,7 @@ export class Discord {
         this.bot.on('ready', async () => {
             this.logger.info(`Logged in as ${this.bot.user.username} (${this.bot.user.id})`);
             this.config.discord.channels.forEach(channel => {
-                this.audios[channel.id] = new DiscordAudio(core, this.bot, this.logger, channel);
+                this.audios[channel.id] = new DiscordVoice(core, this.bot, this.logger, channel);
             });
         });
 

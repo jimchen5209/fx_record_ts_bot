@@ -7,6 +7,7 @@ export class Core {
     public readonly mainLogger = catService;
     public readonly config = new Config(this);
     public telegram: Telegram | undefined;
+
     constructor() {
         try {
             this.telegram = new Telegram(this);
@@ -19,6 +20,9 @@ export class Core {
         } catch (error) {
             this.mainLogger.error('Error occurred when connecting to discord:', error);
         }
+        setInterval(() => {
+            global.gc();
+        }, 30 * 1000);
     }
 }
 

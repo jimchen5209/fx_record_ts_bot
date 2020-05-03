@@ -1,15 +1,16 @@
 import { CommandClient, Message, TextChannel, MessageFile } from 'eris';
 import { Category } from 'typescript-logging';
-import { DiscordAudio } from './Audio';
+import { DiscordVoice } from './Voice';
 import { Discord } from '../Core';
 
 const ERR_NOT_IN_VOICE_CHANNEL = 'You are not in any voice channel.';
 const ERR_BOT_NOT_IN_VOICE_CHANNEL = 'Bot is not in this channel.'
+const ERR_NO_DATA = 'No data.'
 
 export class DiscordText {
     private bot: CommandClient;
     private logger: Category;
-    private audios: { [key: string]: DiscordAudio } = {};
+    private audios: { [key: string]: DiscordVoice } = {};
 
     constructor(discord: Discord,bot: CommandClient, logger: Category) {
         this.bot = bot;
@@ -61,6 +62,10 @@ export class DiscordText {
 
         const userID = args[0];
         const buffer = this.audios[voiceChannelID].getUserMP3Buffer(userID);
-        if (buffer !== undefined) msg.channel.createMessage('', { file: buffer, name: `${userID}.mp3` } as MessageFile);
+        if (buffer !== undefined) {
+            msg.channel.createMessage('', { file: buffer, name: `${userID}.mp3` } as MessageFile);
+        } else {
+            msg.channel.createMessage(ERR_NO_DATA);
+        }
     }
 }

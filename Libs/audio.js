@@ -9,7 +9,7 @@ function soundFileStreamGenerator(filePath, debug) {
         '-acodec', 'pcm_s16le',
         '-ar', '48000',
         '-y', 'pipe:1'
-    ])
+    ]);
 
     if (debug) {
         outputStream.stderr.on("data", data => console.log(data.toString()));
@@ -17,18 +17,22 @@ function soundFileStreamGenerator(filePath, debug) {
         outputStream.stderr.on("data", data => {});
     }
 
-    return (outputStream.stdout)
+    return (outputStream.stdout);
 }
 
-async function addStreamToChannelPlayMixer(stream, voiceChannelID) {
-    const mixer = global.discord.audio.playMixer[voiceChannelID];
-    const source = mixer.addSource(new Stream.PassThrough());
+async function addStreamToChannelPlayMixer(stream, mixer) {
+    const source = new Stream.PassThrough();
+    // mixer.addSource(stream);
+    mixer.addSource(source);
     stream.on("data", (data) => {
-        source.addBuffer(data);
-    })
+        source.write(data);
+    });
+    stream.on("end", () => {
+        source.end()
+    });
 }
 
-function generatePCMtoMP3Stream(stream,debug) {
+function generatePCMtoMP3Stream(stream, debug) {
     const outputStream = spawn(require('ffmpeg-static'), [
         '-f', 's16le', // 16-bit raw PCM
         '-ac', 2, // in channels
@@ -40,7 +44,7 @@ function generatePCMtoMP3Stream(stream,debug) {
         '-ab', '320k', // bitrate
         '-f', 'mp3', // MP3 container
         '-' // stdout
-    ])
+    ]);
 
     if (debug) {
         outputStream.stderr.on("data", data => console.log(data.toString()));

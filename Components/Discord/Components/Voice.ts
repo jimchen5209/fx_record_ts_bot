@@ -1,18 +1,16 @@
-import { CommandClient, VoiceConnection } from 'eris';
+import { CommandClient, VoiceConnection, VoiceChannel } from 'eris';
 import { Category } from 'typescript-logging';
 import Stream from 'stream';
 import moment from 'moment-timezone';
 import { Core } from '../../..';
 import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
 import AudioUtils from '../../../Libs/audio';
-// import { AudioUtils } from '../../../Core/AudioUtils';
 
 export class DiscordVoice {
     private core: Core;
     private bot: CommandClient;
     private logger: Category;
     private channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] };
-    // private audioUtils: AudioUtils;
     private playMixer = new LicsonMixer(16, 2, 48000);
     private recvMixer = new LicsonMixer(16, 2, 48000);
     private userMixers: { [key: string]: LicsonMixer } = {};
@@ -31,7 +29,6 @@ export class DiscordVoice {
         this.bot = bot;
         this.logger = logger;
         this.channelConfig = channelConfig;
-        // this.audioUtils = new AudioUtils(core,this.channelConfig.id);
 
         this.startAudioSession(this.channelConfig.id);
     }
@@ -45,6 +42,7 @@ export class DiscordVoice {
             this.startPlayMixer(connection);
             this.startRecording(connection);
             this.startSendRecord(connection);
+            this.setEndStreamEvents(connection);
         });
     }
 
@@ -55,28 +53,47 @@ export class DiscordVoice {
         });
     }
 
+    public playSound(sound: string) {
+        this.logger.info(`Play ${sound} in voice channel ${this.channelConfig.id}} `);
+
+        const playStream = AudioUtils.soundFileStreamGenerator(sound, this.core.config.debug);
+        AudioUtils.addStreamToChannelPlayMixer(playStream, this.playMixer);
+    }
+
     private startRecording(connection: VoiceConnection) {
         const recvStream = connection.receive('pcm');
+
+        this.addNewUserToMixer(this.bot.user.id);
+
+        (this.playMixer as unknown as Stream.Readable).on('data', (data: any) => {
+            this.userRawPCMStreams[this.bot.user.id].write(data);
+            this.userRawMP3Streams[this.bot.user.id].write(data);
+        });
+
         recvStream.on('data', (data, userID, timestamp, sequence) => {
             if (userID === undefined || this.channelConfig.ignoreUsers.includes(userID)) return;
 
             if (this.userRawPCMStreams[userID] === undefined || this.userRawMP3Streams[userID] === undefined) {
-                this.logger.info(`New user ${userID} to record mixer ${this.channelConfig.id}.`);
-                const userMixer = this.userMixers[userID] = new LicsonMixer(16, 2, 48000);
-                const userMP3Buffer: any[] = this.userMP3Buffers[userID] = [];
-                this.userRawPCMStreams[userID] = new Stream.PassThrough();
-                this.userRawMP3Streams[userID] = new Stream.PassThrough();
-
-                userMixer.addSource(this.userRawMP3Streams[userID]);
-                this.recvMixer.addSource(this.userRawPCMStreams[userID]);
-
-                AudioUtils.generatePCMtoMP3Stream(userMixer, this.core.config.debug).on('data', (mp3Data: any) => {
-                    userMP3Buffer.push(mp3Data);
-                    if (userMP3Buffer.length > 4096) userMP3Buffer.splice(0, userMP3Buffer.length - 4096);
-                })
+                this.addNewUserToMixer(userID);
             }
             this.userRawPCMStreams[userID].write(data);
             this.userRawMP3Streams[userID].write(data);
+        });
+    }
+
+    private addNewUserToMixer(userID: string) {
+        this.logger.info(`New user ${userID} to record mixer ${this.channelConfig.id}.`);
+        const userMixer = this.userMixers[userID] = new LicsonMixer(16, 2, 48000);
+        const userMP3Buffer: any[] = this.userMP3Buffers[userID] = [];
+        this.userRawPCMStreams[userID] = new Stream.PassThrough();
+        this.userRawMP3Streams[userID] = new Stream.PassThrough();
+
+        userMixer.addSource(this.userRawMP3Streams[userID]);
+        this.recvMixer.addSource(this.userRawPCMStreams[userID]);
+
+        AudioUtils.generatePCMtoMP3Stream(userMixer, this.core.config.debug).on('data', (mp3Data: any) => {
+            userMP3Buffer.push(mp3Data);
+            if (userMP3Buffer.length > 4096) userMP3Buffer.splice(0, userMP3Buffer.length - 4096);
         });
     }
 
@@ -87,9 +104,10 @@ export class DiscordVoice {
                 mp3File.push(data);
             });
 
+            let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
+
             this.telegramSendInterval = setInterval(() => {
-                const mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
-                const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
+                const mp3End =  moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
                 const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}\n#channel${connection.channelID}`;
                 const fileName = `${mp3Start} to ${mp3End}`;
                 const fileData = Buffer.concat(mp3File);
@@ -97,6 +115,7 @@ export class DiscordVoice {
                 this.logger.info(`Sending ${mp3File.length} data of ${this.channelConfig.id} to telegram ${this.channelConfig.fileDest.id}`);
                 mp3File = [];
                 this.core.telegram!.sendAudio(this.channelConfig.fileDest.id, fileData, fileName, caption);
+                mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
             }, 20 * 1000);
         }
     }
@@ -106,6 +125,16 @@ export class DiscordVoice {
         this.playMixer = new LicsonMixer(16, 2, 48000);
         this.recvMixer = new LicsonMixer(16, 2, 48000);
         this.userMixers = {};
+        for (const user in Object.keys(this.userRawMP3Streams)) {
+            if (this.userRawMP3Streams[user] === undefined) continue;
+            this.userRawMP3Streams[user].end();
+            delete this.userRawMP3Streams[user];
+        }
+        for (const user in Object.keys(this.userRawPCMStreams)) {
+            if (this.userRawPCMStreams[user] === undefined) continue;
+            this.userRawPCMStreams[user].end();
+            delete this.userRawPCMStreams[user];
+        }
         this.userRawPCMStreams = {};
         this.userRawMP3Streams = {};
         this.userMP3Buffers = {};
@@ -132,5 +161,28 @@ export class DiscordVoice {
         connection.once('error', error);
         connection.once('disconnect', error);
         return connection;
+    }
+
+    private endStream(userID: string) {
+        if (this.userRawPCMStreams[userID] && this.userRawMP3Streams[userID]) {
+            this.userRawPCMStreams[userID].end();
+            this.userRawMP3Streams[userID].end();
+            delete this.userRawPCMStreams[userID];
+            delete this.userRawMP3Streams[userID];
+        }
+    }
+
+    private setEndStreamEvents(connection: VoiceConnection) {
+        const guildID = (this.bot.getChannel(this.channelConfig.id) as VoiceChannel).guild.id;
+        connection.on('userDisconnect', userID => {
+            this.endStream(userID);
+        });
+
+        this.bot.on('voiceChannelSwitch', (member, newChannel, oldChannel) => {
+            if (newChannel.guild.id !== guildID) return;
+            if (newChannel.id !== this.channelConfig.id) {
+                this.endStream(member.id);
+            }
+        });
     }
 }

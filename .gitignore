@@ -128,5 +128,6 @@ dist
 
 #project
 config.json
+sound.json
 assets/
 Libs/LicsonMixer/mixer/build/

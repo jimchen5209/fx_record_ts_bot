@@ -107,7 +107,7 @@ export class DiscordVoice {
             let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
 
             this.telegramSendInterval = setInterval(() => {
-                const mp3End =  moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
+                const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
                 const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}\n#channel${connection.channelID}`;
                 const fileName = `${mp3Start} to ${mp3End}`;
                 const fileData = Buffer.concat(mp3File);

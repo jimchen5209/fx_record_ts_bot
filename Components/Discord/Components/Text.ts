@@ -15,7 +15,7 @@ export class DiscordText {
     private audios: { [key: string]: DiscordVoice } = {};
     private sound: SoundFx;
 
-    constructor(core: Core, discord: Discord,bot: CommandClient, logger: Category) {
+    constructor(core: Core, discord: Discord, bot: CommandClient, logger: Category) {
         this.bot = bot;
         this.logger = logger;
         this.audios = discord.audios;

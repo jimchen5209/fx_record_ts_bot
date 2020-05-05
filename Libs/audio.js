@@ -14,7 +14,7 @@ function soundFileStreamGenerator(filePath, debug) {
     if (debug) {
         outputStream.stderr.on("data", data => console.log(data.toString()));
     } else {
-        outputStream.stderr.on("data", data => {});
+        outputStream.stderr.on("data", data => { });
     }
 
     return (outputStream.stdout);
@@ -28,7 +28,7 @@ async function addStreamToChannelPlayMixer(stream, mixer) {
         source.write(data);
     });
     stream.on("end", () => {
-        source.end()
+        source.end();
     });
 }
 
@@ -49,7 +49,7 @@ function generatePCMtoMP3Stream(stream, debug) {
     if (debug) {
         outputStream.stderr.on("data", data => console.log(data.toString()));
     } else {
-        outputStream.stderr.on("data", data => {});
+        outputStream.stderr.on("data", data => { });
     }
 
     stream.pipe(outputStream.stdin);

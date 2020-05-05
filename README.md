@@ -2,7 +2,7 @@
 
 ## How to use
 
-1. Install [node.js](https://nodejs.org/en/) (Recommend using [nvm](https://github.com/nvm-sh/nvm)),, [ffmpeg](https://ffmpeg.org/
+1. Install [node.js](https://nodejs.org/en/) (Recommend using [nvm](https://github.com/nvm-sh/nvm)), [ffmpeg](https://ffmpeg.org/)
 2. Clone this repo
 3. Install dependencies with `npm install`
 4. Build with `npm run build:prod`

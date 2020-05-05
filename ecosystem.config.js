@@ -8,7 +8,7 @@ module.exports = {
         autorestart: true,
         watch: false,
         max_memory_restart: '512M',
-	cron_restart: '0 17 * * *',
+        cron_restart: '0 17 * * *',
         env_production: {
             NODE_ENV: 'production'
         }

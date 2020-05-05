@@ -2,7 +2,7 @@ const spawn = require('child_process').spawn;
 const Stream = require('stream');
 
 function soundFileStreamGenerator(filePath, debug) {
-    const outputStream = spawn(require('ffmpeg-static'), [
+    const outputStream = spawn('ffmpeg', [
         '-i', filePath,
         '-f', 's16le',
         '-ac', '2',
@@ -33,7 +33,7 @@ async function addStreamToChannelPlayMixer(stream, mixer) {
 }
 
 function generatePCMtoMP3Stream(stream, debug) {
-    const outputStream = spawn(require('ffmpeg-static'), [
+    const outputStream = spawn('ffmpeg', [
         '-f', 's16le', // 16-bit raw PCM
         '-ac', 2, // in channels
         '-ar', 48000, // in sample rate

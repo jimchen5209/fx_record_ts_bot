@@ -1,4 +1,4 @@
-import { CommandClient, Message, TextChannel, MessageFile } from 'eris';
+import { CommandClient, Message, TextChannel, MessageFile, MessageContent } from 'eris';
 import { Category } from 'typescript-logging';
 import { DiscordVoice } from './Voice';
 import { Discord } from '../Core';
@@ -126,24 +126,12 @@ export class DiscordText {
 
         const voiceChannelID = msg.member.voiceState.channelID;
         if (voiceChannelID === undefined) {
-            msg.channel.createMessage({
-                embed: {
-                    title: 'Error',
-                    color: 13632027,
-                    description: ERR_NOT_IN_VOICE_CHANNEL
-                }
-            });
+            msg.channel.createMessage(this.genErrorMessage(ERR_NOT_IN_VOICE_CHANNEL));
             return;
         }
 
         if (this.audios[voiceChannelID] === undefined) {
-            msg.channel.createMessage({
-                embed: {
-                    title: 'Error',
-                    color: 13632027,
-                    description: ERR_BOT_NOT_IN_VOICE_CHANNEL
-                }
-            });
+            msg.channel.createMessage(this.genErrorMessage(ERR_BOT_NOT_IN_VOICE_CHANNEL));
             return;
         }
 
@@ -152,13 +140,17 @@ export class DiscordText {
         if (buffer !== undefined) {
             msg.channel.createMessage('', { file: buffer, name: `${userID}.mp3` } as MessageFile);
         } else {
-            msg.channel.createMessage({
-                embed: {
-                    title: 'Error',
-                    color: 13632027,
-                    description: ERR_NO_DATA
-                }
-            });
+            msg.channel.createMessage(this.genErrorMessage(ERR_NO_DATA));
         }
+    }
+
+    private genErrorMessage(msg: string) {
+        return {
+            embed: {
+                title: 'Error',
+                color: 13632027,
+                description: msg
+            }
+        } as MessageContent;
     }
 }

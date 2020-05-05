@@ -4,6 +4,7 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+.vsls.json
 
 # Local History for Visual Studio Code
 .history/

@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { resolve } from 'path';
 import { Category } from 'typescript-logging';
 import { Core } from '..';
 
@@ -41,7 +40,7 @@ export class SoundFx {
     public reload() {
         this.logger.info('Loading SoundFx...');
         if (fs.existsSync('./sound.json')) {
-            const sound = require(resolve('./sound.json'));
+            const sound = JSON.parse(fs.readFileSync(`./sound.json`, { encoding: 'utf-8' }));
             this.command = (sound.command) ? sound.command : {};
             this.keyword = (sound.keyword) ? sound.keyword : {};
             // this.reaction = (sound.reaction) ? sound.reaction : {};

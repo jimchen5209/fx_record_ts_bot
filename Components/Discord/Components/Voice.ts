@@ -18,6 +18,7 @@ export class DiscordVoice {
     private userRawMP3Streams: { [key: string]: Stream.PassThrough } = {};
     private userMP3Buffers: { [key: string]: any[] } = {};
     private telegramSendInterval: NodeJS.Timeout | undefined;
+    private clearStreamInterval!: NodeJS.Timeout;
 
     constructor(
         core: Core,
@@ -43,6 +44,7 @@ export class DiscordVoice {
             this.startRecording(connection);
             this.startSendRecord(connection);
             this.setEndStreamEvents(connection);
+            this.startClearStreamInterval();
         });
     }
 
@@ -88,8 +90,8 @@ export class DiscordVoice {
         this.userRawPCMStreams[userID] = new Stream.PassThrough();
         this.userRawMP3Streams[userID] = new Stream.PassThrough();
 
-        userMixer.addSource(this.userRawMP3Streams[userID]);
-        this.recvMixer.addSource(this.userRawPCMStreams[userID]);
+        userMixer.addSource(this.userRawMP3Streams[userID], []);
+        this.recvMixer.addSource(this.userRawPCMStreams[userID], []);
 
         AudioUtils.generatePCMtoMP3Stream(userMixer, this.core.config.debug).on('data', (mp3Data: any) => {
             userMP3Buffer.push(mp3Data);
@@ -125,6 +127,17 @@ export class DiscordVoice {
         this.playMixer = new LicsonMixer(16, 2, 48000);
         this.recvMixer = new LicsonMixer(16, 2, 48000);
         this.userMixers = {};
+        this.clearStreams();
+        this.userRawPCMStreams = {};
+        this.userRawMP3Streams = {};
+        this.userMP3Buffers = {};
+        connection.removeAllListeners();
+        if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
+        clearInterval(this.clearStreamInterval);
+        this.bot.leaveVoiceChannel(connection.channelID);
+    }
+
+    private clearStreams() {
         for (const user in Object.keys(this.userRawMP3Streams)) {
             if (this.userRawMP3Streams[user] === undefined) continue;
             this.userRawMP3Streams[user].end();
@@ -135,12 +148,6 @@ export class DiscordVoice {
             this.userRawPCMStreams[user].end();
             delete this.userRawPCMStreams[user];
         }
-        this.userRawPCMStreams = {};
-        this.userRawMP3Streams = {};
-        this.userMP3Buffers = {};
-        connection.removeAllListeners();
-        if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
-        this.bot.leaveVoiceChannel(connection.channelID);
     }
 
     private async joinVoiceChannel(channelID: string): Promise<VoiceConnection> {
@@ -164,10 +171,12 @@ export class DiscordVoice {
     }
 
     private endStream(userID: string) {
-        if (this.userRawPCMStreams[userID] && this.userRawMP3Streams[userID]) {
+        if (this.userRawPCMStreams[userID]) {
             this.userRawPCMStreams[userID].end();
-            this.userRawMP3Streams[userID].end();
             delete this.userRawPCMStreams[userID];
+        }
+        if (this.userRawMP3Streams[userID]) {
+            this.userRawMP3Streams[userID].end();
             delete this.userRawMP3Streams[userID];
         }
     }
@@ -184,5 +193,11 @@ export class DiscordVoice {
                 this.endStream(member.id);
             }
         });
+    }
+
+    private startClearStreamInterval() {
+        this.clearStreamInterval = setInterval(() => {
+            this.clearStreams();
+        }, 10 * 60 * 1000);
     }
 }

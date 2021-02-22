@@ -14,13 +14,13 @@
   "description": "",
   "dependencies": {
     "eris": "github:abalabahaha/eris#dev",
+    "logging-ts": "git+https://github.com/jimchen5209/Logging-TS.git",
     "moment": "^2.27.0",
     "moment-timezone": "^0.5.28",
     "nan": "^2.14.1",
     "node-gyp": "^6.1.0",
     "node-opus": "^0.3.3",
-    "node-telegram-bot-api": "^0.40.0",
-    "typescript-logging": "^0.6.4"
+    "node-telegram-bot-api": "^0.40.0"
   },
   "devDependencies": {
     "@types/moment-timezone": "^0.5.30",

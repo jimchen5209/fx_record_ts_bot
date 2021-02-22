@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { resolve } from 'path';
-import { Category } from 'typescript-logging';
+import { Category } from 'logging-ts';
 import { Core } from '..';
 
 export class Config {

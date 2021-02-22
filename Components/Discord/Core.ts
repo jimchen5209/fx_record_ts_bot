@@ -1,5 +1,5 @@
 import { CommandClient } from 'eris';
-import { Category } from 'typescript-logging';
+import { Category } from 'logging-ts';
 import { Config } from '../../Core/Config';
 import { Core } from '../..';
 import { DiscordVoice } from './Components/Voice';

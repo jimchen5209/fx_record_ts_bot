@@ -1,5 +1,5 @@
 import { CommandClient, VoiceConnection, VoiceChannel } from 'eris';
-import { Category } from 'typescript-logging';
+import { Category } from 'logging-ts';
 import Stream from 'stream';
 import moment from 'moment-timezone';
 import { Core } from '../../..';
@@ -139,14 +139,14 @@ export class DiscordVoice {
 
     private clearStreams() {
         for (const user in Object.keys(this.userRawMP3Streams)) {
-            if (this.userRawMP3Streams[user] === undefined) continue;
-            this.userRawMP3Streams[user].end();
-            delete this.userRawMP3Streams[user];
+            if (this.userRawMP3Streams[user]) {
+                this.endStream(user);
+            }
         }
         for (const user in Object.keys(this.userRawPCMStreams)) {
-            if (this.userRawPCMStreams[user] === undefined) continue;
-            this.userRawPCMStreams[user].end();
-            delete this.userRawPCMStreams[user];
+            if (this.userRawPCMStreams[user]) {
+                this.endStream(user);
+            }
         }
     }
 

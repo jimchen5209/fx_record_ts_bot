@@ -1,5 +1,5 @@
 import { CommandClient, Message, TextChannel, MessageFile, MessageContent } from 'eris';
-import { Category } from 'typescript-logging';
+import { Category } from 'logging-ts';
 import { DiscordVoice } from './Voice';
 import { Discord } from '../Core';
 import { SoundFx } from '../../../Core/SoundFX';

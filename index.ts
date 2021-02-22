@@ -1,5 +1,5 @@
 import { Config } from './Core/Config';
-import { catService } from './Core/Logger';
+import { catService } from 'logging-ts';
 import { Telegram } from './Components/Telegram/Core';
 import { Discord } from './Components/Discord/Core';
 

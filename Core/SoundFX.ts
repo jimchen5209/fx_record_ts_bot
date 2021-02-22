@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { Category } from 'typescript-logging';
+import { Category } from 'logging-ts';
 import { Core } from '..';
 
 export class SoundFx {

@@ -205,11 +205,11 @@ MixerStream.prototype._startMerge = function _startMerge(length) {
             if (item.buffers[0].length >= length) {
                 temp = item.buffers[0];
                 buffers.push(temp.slice(0, length));
-                item.buffers[0] = temp.slice(length);
+                item.buffers[0] = Uint8Array.prototype.slice.call(temp, length);
             } else {
                 temp = Buffer.concat(item.buffers);
                 buffers.push(temp.slice(0, length));
-                item.buffers = [temp.slice(length)];
+                item.buffers = [Uint8Array.prototype.slice.call(temp,length)];
             }
             item.length -= length;
         } else {

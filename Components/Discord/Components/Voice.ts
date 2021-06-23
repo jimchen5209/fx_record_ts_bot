@@ -5,6 +5,7 @@ import moment from 'moment-timezone';
 import { Core } from '../../..';
 import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
 import AudioUtils from '../../../Libs/audio';
+import AbortStream from '../../../Libs/abort';
 
 export class DiscordVoice {
     private core: Core;
@@ -13,7 +14,7 @@ export class DiscordVoice {
     private channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] };
     private playMixer = new LicsonMixer(16, 2, 48000);
     private recvMixer = new LicsonMixer(16, 2, 48000);
-    private userMixers: { [key: string]: LicsonMixer } = {};
+    // private userMixers: { [key: string]: LicsonMixer } = {};
     private userRawPCMStreams: { [key: string]: Stream.PassThrough } = {};
     private userRawMP3Streams: { [key: string]: Stream.PassThrough } = {};
     private userMP3Buffers: { [key: string]: any[] } = {};
@@ -42,7 +43,7 @@ export class DiscordVoice {
         this.joinVoiceChannel(channelID).then(connection => {
             this.startPlayMixer(connection);
             this.startRecording(connection);
-            this.startSendRecord(connection);
+            this.startSendRecord();
             this.setEndStreamEvents(connection);
             this.startClearStreamInterval();
         });
@@ -58,48 +59,62 @@ export class DiscordVoice {
     public playSound(sound: string) {
         this.logger.info(`Play ${sound} in voice channel ${this.channelConfig.id}} `);
 
-        const playStream = AudioUtils.soundFileStreamGenerator(sound, this.core.config.debug);
-        AudioUtils.addStreamToChannelPlayMixer(playStream, this.playMixer);
+        // const playStream = AudioUtils.soundFileStreamGenerator(sound, this.core.config.debug);
+        // AudioUtils.addStreamToChannelPlayMixer(playStream, this.playMixer);
     }
 
     private startRecording(connection: VoiceConnection) {
-        const recvStream = connection.receive('pcm');
-
-        this.addNewUserToMixer(this.bot.user.id);
-
-        (this.playMixer as unknown as Stream.Readable).on('data', (data: any) => {
-            this.userRawPCMStreams[this.bot.user.id].write(data);
-            this.userRawMP3Streams[this.bot.user.id].write(data);
+        connection.receive('pcm').on('data', (data, user, time) => {
+            if (user === undefined) return;
+            // console.log(`User: ${user}, time: ${time}`);
+            let source = this.recvMixer.getSources(user)[0]
+            if (!source) source = this.recvMixer.addSource(new AbortStream(64 * 1000 * 8, 64 * 1000 * 4), user)
+            source.stream.write(data)
         });
 
-        recvStream.on('data', (data, userID, timestamp, sequence) => {
-            if (userID === undefined || this.channelConfig.ignoreUsers.includes(userID)) return;
+        // this.addNewUserToMixer(this.bot.user.id);
 
-            if (this.userRawPCMStreams[userID] === undefined || this.userRawMP3Streams[userID] === undefined) {
-                this.addNewUserToMixer(userID);
-            }
-            this.userRawPCMStreams[userID].write(data);
-            this.userRawMP3Streams[userID].write(data);
-        });
+        // (this.playMixer as unknown as Stream.Readable).on('data', (data: any) => {
+        //     // if (!this.userRawPCMStreams[this.bot.user.id].write(data)) {
+        //     //     console.log("userRawPCMStreams write false")
+        //     // };
+        //     if (!this.userRawMP3Streams[this.bot.user.id].write(data)) {
+        //         // console.log("userRawMP3Streams write false")
+        //     };
+        // });
+
+        // recvStream.on('data', (data, userID, timestamp, sequence) => {
+        //     if (userID === undefined || this.channelConfig.ignoreUsers.includes(userID)) return;
+
+        //     if (false || this.userRawMP3Streams[userID] === undefined) {
+        //         this.addNewUserToMixer(userID);
+        //     }
+        //     // if (!this.userRawPCMStreams[userID].write(data)){
+        //     //     console.log("userRawPCMStreams write false 2")
+        //     // };
+        //     if (!this.userRawMP3Streams[userID].write(data)) {
+        //         // console.log("userRawMP3Streams write false 2")
+        //     };
+        // });
     }
 
-    private addNewUserToMixer(userID: string) {
-        this.logger.info(`New user ${userID} to record mixer ${this.channelConfig.id}.`);
-        const userMixer = this.userMixers[userID] = new LicsonMixer(16, 2, 48000);
-        const userMP3Buffer: any[] = this.userMP3Buffers[userID] = [];
-        this.userRawPCMStreams[userID] = new Stream.PassThrough();
-        this.userRawMP3Streams[userID] = new Stream.PassThrough();
+    // private addNewUserToMixer(userID: string) {
+    //     this.logger.info(`New user ${userID} to record mixer ${this.channelConfig.id}.`);
+    //     const userMixer = this.userMixers[userID] = new LicsonMixer(16, 2, 48000);
+    //     const userMP3Buffer: any[] = this.userMP3Buffers[userID] = [];
+    //     // this.userRawPCMStreams[userID] = new Stream.PassThrough();
+    //     this.userRawMP3Streams[userID] = new Stream.PassThrough();
 
-        userMixer.addSource(this.userRawMP3Streams[userID], []);
-        this.recvMixer.addSource(this.userRawPCMStreams[userID], []);
+    //     userMixer.addSource(this.userRawMP3Streams[userID], []);
+    //     // this.recvMixer.addSource(this.userRawPCMStreams[userID], []);
 
-        AudioUtils.generatePCMtoMP3Stream(userMixer, this.core.config.debug).on('data', (mp3Data: any) => {
-            userMP3Buffer.push(mp3Data);
-            if (userMP3Buffer.length > 4096) userMP3Buffer.splice(0, userMP3Buffer.length - 4096);
-        });
-    }
+    //     // AudioUtils.generatePCMtoMP3Stream(userMixer, this.core.config.debug).on('data', (mp3Data: any) => {
+    //     //     userMP3Buffer.push(mp3Data);
+    //     //     if (userMP3Buffer.length > 4096) userMP3Buffer.splice(0, userMP3Buffer.length - 4096);
+    //     // });
+    // }
 
-    private startSendRecord(connection: VoiceConnection) {
+    private startSendRecord() {
         if (this.channelConfig.fileDest.type === 'telegram' && this.channelConfig.fileDest.id !== '' && this.core.telegram !== undefined) {
             let mp3File: any[] = [];
             AudioUtils.generatePCMtoMP3Stream(this.recvMixer, this.core.config.debug).on('data', (data: any) => {
@@ -110,7 +125,7 @@ export class DiscordVoice {
 
             this.telegramSendInterval = setInterval(() => {
                 const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
-                const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}\n#channel${connection.channelID}`;
+                const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}`;
                 const fileName = `${mp3Start} to ${mp3End}`;
                 const fileData = Buffer.concat(mp3File);
 
@@ -118,15 +133,15 @@ export class DiscordVoice {
                 mp3File = [];
                 this.core.telegram!.sendAudio(this.channelConfig.fileDest.id, fileData, fileName, caption);
                 mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
-            }, 20 * 1000);
+            }, 10 * 1000);
         }
     }
 
     private stopSession(connection: VoiceConnection) {
         connection.stopPlaying();
-        this.playMixer = new LicsonMixer(16, 2, 48000);
-        this.recvMixer = new LicsonMixer(16, 2, 48000);
-        this.userMixers = {};
+        // this.playMixer = new LicsonMixer(16, 2, 48000);
+        // this.recvMixer = new LicsonMixer(16, 2, 48000);
+        // this.userMixers = {};
         this.clearStreams();
         this.userRawPCMStreams = {};
         this.userRawMP3Streams = {};

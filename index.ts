@@ -20,9 +20,9 @@ export class Core {
         } catch (error) {
             this.mainLogger.error('Error occurred when connecting to discord:', error);
         }
-        setInterval(() => {
-            global.gc();
-        }, 30 * 1000);
+        // setInterval(() => {
+        //     global.gc();
+        // }, 30 * 1000);
     }
 }
 

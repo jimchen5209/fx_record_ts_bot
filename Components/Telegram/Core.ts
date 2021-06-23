@@ -20,13 +20,13 @@ export class Telegram {
     }
 
     public sendAudio(chatID: string, fileData: Buffer, filename: string, caption: string) {
-        this.bot.sendDocument(
+        this.bot.sendAudio(
             chatID,
             fileData,
             { caption },
             { filename }
         ).catch(err => {
-            this.logger.error(err, null);
-        })
+            console.log(err)
+        }).then(() => console.log(`Send done: ${filename}`))
     }
 }

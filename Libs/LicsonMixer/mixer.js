@@ -157,9 +157,10 @@ class MixerStream extends stream.Readable {
         }
     };
 
-    _destroy() {
-        // this._stopPolling()
+    stop() {
         this._stopLoop()
+        this.sources = []
+        this.push(null)
     }
 
     // start to push data to destination

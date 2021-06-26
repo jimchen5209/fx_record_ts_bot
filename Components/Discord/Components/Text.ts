@@ -6,8 +6,8 @@ import { SoundFx } from '../../../Core/SoundFX';
 import { Core } from '../../..';
 
 const ERR_NOT_IN_VOICE_CHANNEL = 'You are not in any voice channel.';
-const ERR_BOT_NOT_IN_VOICE_CHANNEL = 'Bot is not in this channel.'
-const ERR_NO_DATA = 'No data.'
+const ERR_BOT_NOT_IN_VOICE_CHANNEL = 'Bot is not in this channel.';
+const ERR_NO_DATA = 'No data.';
 
 export class DiscordText {
     private bot: CommandClient;
@@ -79,7 +79,7 @@ export class DiscordText {
             this.sound.getSoundKeyWordList().forEach(word => {
                 if (command.includes(word)) this.audios[voiceChannelID].playSound(this.sound.getAssetFromKeyWord(word));
             });
-        })
+        });
     }
 
     private async commandShowList(msg: Message) {
@@ -103,9 +103,9 @@ export class DiscordText {
             embed: {
                 title: 'Reloading sound list...',
                 color: 16312092,
-                description: `Please wait...`
+                description: 'Please wait...'
             }
-        })
+        });
 
         this.sound.reload();
 

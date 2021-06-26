@@ -16,9 +16,9 @@ export class Telegram {
 
         if (this.config.telegram.token === '') throw ERR_MISSING_TOKEN;
 
-        this.bot = new TelegramBot(core.config.telegram.token, { baseApiUrl: "http://10.121.35.22:8081" });
+        this.bot = new TelegramBot(core.config.telegram.token, { baseApiUrl: 'http://10.121.35.22:8081' });
 
-        this.bot.onText(/\/ping(?:@\w+)?/, msg => this.bot.sendMessage(msg.chat.id, "pong", { reply_to_message_id: msg.message_id }));
+        this.bot.onText(/\/ping(?:@\w+)?/, msg => this.bot.sendMessage(msg.chat.id, 'pong', { reply_to_message_id: msg.message_id }));
     }
 
     public async sendAudio(chatID: string, file: string, caption: string) {
@@ -33,6 +33,6 @@ export class Telegram {
         }
 
         console.log(`Send done: ${file}`);
-        return file
+        return file;
     }
 }

@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { resolve } from 'path';
 import { Category } from 'logging-ts';
 import { Core } from '..';
 
@@ -15,7 +14,7 @@ export class Config {
         const discordDefaultConfig = { token: '', channels: [{ id: '', fileDest: { type: 'telegram', id: '' }, ignoreUsers: [] }], admins: [] };
         const telegramDefaultConfig = { token: '', admins: [] };
         if (fs.existsSync('./config.json')) {
-            const config = require(resolve('./config.json'));
+            const config = JSON.parse(fs.readFileSync('config.json', { encoding: 'utf-8' }));
             this.discord = (config.discord) ? config.discord : discordDefaultConfig;
             this.telegram = (config.telegram) ? config.telegram : telegramDefaultConfig;
             this.debug = (config.Debug) ? config.Debug : false;

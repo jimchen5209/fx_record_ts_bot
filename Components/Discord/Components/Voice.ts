@@ -53,7 +53,7 @@ export class DiscordVoice {
 
     private startAudioSession(channelID: string) {
         this.joinVoiceChannel(channelID).then(connection => {
-            connection.play(this.playMixer, { format: 'opusPackets' })
+            connection.play(this.playMixer, { format: 'opusPackets' });
             this.startRecording(connection);
             this.startSendRecord();
             this.setEndStreamEvents(connection);
@@ -79,9 +79,9 @@ export class DiscordVoice {
         connection.receive('pcm').on('data', (data, user, time) => {
             if (user === undefined) return;
             // console.log(`User: ${user}, time: ${time}`);
-            let source = this.recvMixer.getSources(user)[0]
-            if (!source) source = this.recvMixer.addSource(new AbortStream(64 * 1000 * 8, 64 * 1000 * 4), user)
-            source.stream.write(data)
+            let source = this.recvMixer.getSources(user)[0];
+            if (!source) source = this.recvMixer.addSource(new AbortStream(64 * 1000 * 8, 64 * 1000 * 4), user);
+            source.stream.write(data);
         });
 
         // this.addNewUserToMixer(this.bot.user.id);
@@ -132,23 +132,23 @@ export class DiscordVoice {
 
             let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
 
-            if (existsSync('temp')) rmdirSync('temp', { recursive: true })
+            if (existsSync('temp')) rmdirSync('temp', { recursive: true });
             mkdirSync('temp');
 
-            let writeStream = createWriteStream(`temp/${mp3Start}.mp3`)
-            mp3Stream.pipe(writeStream)
+            let writeStream = createWriteStream(`temp/${mp3Start}.mp3`);
+            mp3Stream.pipe(writeStream);
 
             this.telegramSendInterval = setInterval(() => {
-                mp3Stream.unpipe()
-                writeStream.end()
+                mp3Stream.unpipe();
+                writeStream.end();
                 const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
                 const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}`;
 
                 this.logger.info(`Sending ${mp3Start}.mp3 of ${this.channelConfig.id} to telegram ${this.channelConfig.fileDest.id}`);
-                this.core.telegram!.sendAudio(this.channelConfig.fileDest.id, `temp/${mp3Start}.mp3`, caption).then(i => unlinkSync(i));
+                this.core.telegram?.sendAudio(this.channelConfig.fileDest.id, `temp/${mp3Start}.mp3`, caption).then(i => unlinkSync(i));
                 mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
-                writeStream = createWriteStream(`temp/${mp3Start}.mp3`)
-                mp3Stream.pipe(writeStream)
+                writeStream = createWriteStream(`temp/${mp3Start}.mp3`);
+                mp3Stream.pipe(writeStream);
             }, 60 * 1000);
         }
     }
@@ -167,7 +167,7 @@ export class DiscordVoice {
         this.recvMixer = new LicsonMixer(16, 2, 48000);
         if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
         // clearInterval(this.clearStreamInterval);
-        this.bot.leaveVoiceChannel(connection.channelID!!);
+        if (connection.channelID) this.bot.leaveVoiceChannel(connection.channelID);
     }
 
     // private clearStreams() {
@@ -198,7 +198,7 @@ export class DiscordVoice {
         // };
         // connection.once('error', error);
         connection.once('disconnect', () => {
-            this.stopSession(connection)
+            this.stopSession(connection);
             setTimeout(() => {
                 this.startAudioSession(channelID);
             }, 5 * 1000);
@@ -207,7 +207,7 @@ export class DiscordVoice {
     }
 
     private endStream(userID: string) {
-        const source = this.recvMixer.getSources(userID)[0]
+        const source = this.recvMixer.getSources(userID)[0];
         if (source) source.stream.end();
         // if (this.userRawPCMStreams[userID]) {
         //     this.userRawPCMStreams[userID].end();
@@ -225,7 +225,7 @@ export class DiscordVoice {
             this.endStream(userID);
         });
 
-        this.bot.on('voiceChannelSwitch', (member, newChannel, oldChannel) => {
+        this.bot.on('voiceChannelSwitch', (member, newChannel) => {
             if (newChannel.guild.id !== guildID) return;
             if (newChannel.id !== this.channelConfig.id) {
                 this.endStream(member.id);

@@ -119,24 +119,24 @@ export class DiscordVoice {
         if (this.channelConfig.fileDest.type === 'telegram' && this.channelConfig.fileDest.id !== '' && this.core.telegram !== undefined) {
             const mp3Stream = AudioUtils.generatePCMtoMP3Stream(this.recvMixer, this.core.config.debug);
 
-            let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
+            let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
 
-            if (existsSync('temp')) rmdirSync('temp', { recursive: true });
-            mkdirSync('temp');
+            if (existsSync(`temp/${this.channelConfig.id}`)) rmdirSync(`temp/${this.channelConfig.id}`, { recursive: true });
+            mkdirSync(`temp/${this.channelConfig.id}`);
 
-            let writeStream = createWriteStream(`temp/${mp3Start}.mp3`);
+            let writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
             mp3Stream.pipe(writeStream);
 
             this.telegramSendInterval = setInterval(() => {
                 mp3Stream.unpipe();
                 writeStream.end();
-                const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
-                const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #YYYY')}`;
+                const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+                const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #hhmm #YYYY')}`;
 
                 this.logger.info(`Sending ${mp3Start}.mp3 of ${this.channelConfig.id} to telegram ${this.channelConfig.fileDest.id}`);
-                this.core.telegram?.sendAudio(this.channelConfig.fileDest.id, `temp/${mp3Start}.mp3`, caption).then(i => unlinkSync(i));
-                mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh:mm:ss');
-                writeStream = createWriteStream(`temp/${mp3Start}.mp3`);
+                this.core.telegram?.sendAudio(this.channelConfig.fileDest.id, `temp/${this.channelConfig.id}/${mp3Start}.mp3`, caption).then(i => unlinkSync(i));
+                mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+                writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
                 mp3Stream.pipe(writeStream);
             }, 60 * 1000);
         }

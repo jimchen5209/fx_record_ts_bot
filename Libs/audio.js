@@ -57,6 +57,7 @@ function generatePCMtoMP3Stream(stream, debug) {
     // }
 
     stream.pipe(outputStream.stdin);
+    stream.on('close', () => outputStream.kill("SIGHUP"))
 
     return (outputStream.stdout);
 }

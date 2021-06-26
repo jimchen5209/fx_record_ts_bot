@@ -33,7 +33,6 @@ namespace NativeMixingOperation {
 	// Lookup tables
 	const size_t TableSize = 4000;
 	std::vector<double> EasingLookup;
-	std::vector<double> VolumeMapping;
 	
 	double MixSample(double a, double b) {
 		return (1.0 - fabs(a * b)) * (a + b);
@@ -55,20 +54,7 @@ namespace NativeMixingOperation {
 		uint32_t i = (uint32_t)floor(x * (TableSize - 1));
 		return from + EasingLookup[i] * (to - from);
 	}
-	
-	double VolumeFunction(double x) {
-		// return exp(6.907 * x) / 1000;
-		return pow(10.0, (1.0 - x) * -3);
-	}
-	
-	double Volume(double v) {
-		if (v > 1.0) v = 1.0;
-		if (v < 0.0) v = 0.0;
-		
-		uint32_t i = (uint32_t)floor(v * (TableSize - 1));
-		return VolumeMapping[i];
-	}
-	
+
 	double ReadSample(char* p, unsigned int byteSize) {
 		double sample = 0.0;
 		uint32_t max = GetMaxSampleValue(byteSize);
@@ -186,15 +172,8 @@ namespace NativeMixingOperation {
 			return env.Null();
 		}
 
-		char* outputBuffer = new (std::nothrow) char[length];
-
-		if (outputBuffer == nullptr) {
-			Error::New(env, "Memory allocation failed!").ThrowAsJavaScriptException();
-			free(outputBuffer);
-			return env.Null();
-		}
-
-		Buffer<char> output = Buffer<char>::New(env, outputBuffer, length);
+		Buffer<char> output = Buffer<char>::New(env, length);
+		char* outputBuffer = output.Data();
 
 		std::vector<SourceInfo*> sources;
 
@@ -238,7 +217,7 @@ namespace NativeMixingOperation {
 			WriteSample(outputBuffer, value, byteSize);
 			outputBuffer += byteSize;
 		}
-		
+
 		for (uint32_t i = 0; i < sources.size(); i++) {
 			Object src = srcArray.Get(i).As<Object>();
 			src.Set("volume", sources[i]->volume);
@@ -257,10 +236,9 @@ namespace NativeMixingOperation {
 	Object Init(Env env, Object exports) {
 		for (double i = 0; i < TableSize; i++) {
 			EasingLookup.push_back(EasingFunction(i / (TableSize - 1)));
-			VolumeMapping.push_back(VolumeFunction(i / (TableSize - 1)));
 		}
 
-  		return Function::New(env, Mix, "exports");
+  		return Function::New(env, Mix);
 	}
 
 	NODE_API_MODULE(mix, Init)

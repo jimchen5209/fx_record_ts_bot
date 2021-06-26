@@ -25,7 +25,7 @@ export class Discord {
             { defaultCommandOptions: { caseInsensitive: true } }
         );
 
-        this.bot.on('ready', async () => {
+        this.bot.once('ready', async () => {
             this.logger.info(`Logged in as ${this.bot.user.username} (${this.bot.user.id})`);
             this.config.discord.channels.forEach(channel => {
                 this.audios[channel.id] = new DiscordVoice(core, this.bot, this.logger, channel);

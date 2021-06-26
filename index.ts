@@ -15,7 +15,7 @@ export class Core {
             this.mainLogger.error('Error occurred when connecting to telegram:', error);
         }
         try {
-            // tslint:disable-next-line:no-unused-expression
+            // eslint-disable-next-line no-unused-expressions,@typescript-eslint/no-unused-expressions
             new Discord(this);
         } catch (error) {
             this.mainLogger.error('Error occurred when connecting to discord:', error);
@@ -27,5 +27,5 @@ export class Core {
     }
 }
 
-// tslint:disable-next-line:no-unused-expression
+// eslint-disable-next-line no-unused-expressions,@typescript-eslint/no-unused-expressions
 new Core();

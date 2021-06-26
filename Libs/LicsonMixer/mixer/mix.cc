@@ -4,10 +4,7 @@
 */
 
 #include <napi.h>
-#include <stdint.h>
 #include <cmath>
-#include <vector>
-#include <new>
 
 using namespace Napi;
 
@@ -20,7 +17,7 @@ namespace NativeMixingOperation {
 		double transitionTo;
 		char* buffer;
 	};
-	
+
 	// Max value lookup map to speed up GetMaxSampleValue
 	uint32_t maxValues[4] = {
 		(1U << 7) - 1,
@@ -29,28 +26,28 @@ namespace NativeMixingOperation {
 		(1U << 31) - 1
 	};
 	std::vector<uint32_t> maxValueLookup(&maxValues[0], &maxValues[0] + 4);
-	
+
 	// Lookup tables
 	const size_t TableSize = 4000;
 	std::vector<double> EasingLookup;
-	
+
 	double MixSample(double a, double b) {
 		return (1.0 - fabs(a * b)) * (a + b);
 	}
-	
+
 	uint32_t GetMaxSampleValue(unsigned int byteSize) {
 		return maxValueLookup[byteSize - 1];
 	}
-	
+
 	double EasingFunction(double x) {
 		return x * x * x;
 	}
-	
+
 	double Easing(double x, double from, double to) {
 		// Do a clamp to prevent out of bounds access (and Segfaults)
 		if(x > 1.0) x = 1.0;
 		if(x < 0.0) x = 0.0;
-		
+
 		uint32_t i = (uint32_t)floor(x * (TableSize - 1));
 		return from + EasingLookup[i] * (to - from);
 	}
@@ -87,15 +84,15 @@ namespace NativeMixingOperation {
 		sample = (double)rawValue / (double)max;
 		return sample;
 	}
-	
+
 	void WriteSample(char* p, double value, unsigned int byteSize) {
 		if(value > 1.0) value = 1.0;
 		if(value < -1.0) value = -1.0;
-		
+
 		uint32_t max = GetMaxSampleValue(byteSize);
 		int32_t val = 0;
 		val = value * max;
-		
+
 		// Assuming signed little-endian for all types
 		switch (byteSize) {
 			case 1:
@@ -153,7 +150,7 @@ namespace NativeMixingOperation {
 			TypeError::New(env, "Channels must be a number!").ThrowAsJavaScriptException();
 			return env.Null();
 		}
-		
+
 		Array bufArray = args[0].As<Array>();
 		Array srcArray = args[1].As<Array>();
 		unsigned int length = args[2].As<Number>().Uint32Value();
@@ -161,12 +158,12 @@ namespace NativeMixingOperation {
 		unsigned int channels = args[4].As<Number>().Uint32Value();
 		unsigned int sampleSize = bitdepth / 8 * channels;
 		unsigned int byteSize = bitdepth / 8;
-		
+
 		if (bitdepth % 8 != 0) {
 			Error::New(env, "Bit depth must be a multiple of 8!").ThrowAsJavaScriptException();
 			return env.Null();
 		}
-		
+
 		if (byteSize > 4) {
 			Error::New(env, "Unsupported bit depth!").ThrowAsJavaScriptException();
 			return env.Null();

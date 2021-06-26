@@ -24,7 +24,6 @@ export class DiscordVoice {
     private logger: Category;
     private channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] };
     // private playMixer = new LicsonMixer(16, 2, 48000);
-    private playMixer = new Silence();
     private recvMixer = new LicsonMixer(16, 2, 48000);
     // private userMixers: { [key: string]: LicsonMixer } = {};
     // private userRawPCMStreams: { [key: string]: Stream.PassThrough } = {};
@@ -53,7 +52,7 @@ export class DiscordVoice {
 
     private startAudioSession(channelID: string) {
         this.joinVoiceChannel(channelID).then(connection => {
-            connection.play(this.playMixer, { format: 'opusPackets' })
+            connection.play(new Silence(), { format: 'opusPackets' })
             this.startRecording(connection);
             this.startSendRecord();
             this.setEndStreamEvents(connection);
@@ -163,7 +162,7 @@ export class DiscordVoice {
         // this.userRawMP3Streams = {};
         // this.userMP3Buffers = {};
         // connection.removeAllListeners();
-        this.recvMixer.destroy();
+        this.recvMixer.stop();
         this.recvMixer = new LicsonMixer(16, 2, 48000);
         if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
         // clearInterval(this.clearStreamInterval);

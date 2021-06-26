@@ -4,7 +4,7 @@ import { Core } from '..';
 
 export class Config {
     public discord: { token: string, channels: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] }[], admins: string[] };
-    public telegram: { token: string, admins: string[] };
+    public telegram: { token: string, admins: string[], baseApiUrl: string|undefined };
     public debug: boolean;
     private logger: Category;
 
@@ -12,7 +12,7 @@ export class Config {
         this.logger = new Category('Config', core.mainLogger);
         this.logger.info('Loading Config...');
         const discordDefaultConfig = { token: '', channels: [{ id: '', fileDest: { type: 'telegram', id: '' }, ignoreUsers: [] }], admins: [] };
-        const telegramDefaultConfig = { token: '', admins: [] };
+        const telegramDefaultConfig = { token: '', admins: [], baseApiUrl: undefined };
         if (fs.existsSync('./config.json')) {
             const config = JSON.parse(fs.readFileSync('config.json', { encoding: 'utf-8' }));
             this.discord = (config.discord) ? config.discord : discordDefaultConfig;

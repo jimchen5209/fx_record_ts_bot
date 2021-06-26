@@ -13,7 +13,7 @@
   "license": "AGPL-3.0-only",
   "description": "",
   "dependencies": {
-    "eris": "0.15.1",
+    "eris": "^0.15.1",
     "logging-ts": "git+https://github.com/jimchen5209/Logging-TS.git",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.51.1",
+    "@types/ws": "^7.4.5",
     "@typescript-eslint/eslint-plugin": "^4.28.0",
     "@typescript-eslint/parser": "^4.28.0",
     "eslint": "^7.29.0",

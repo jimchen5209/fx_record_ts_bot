@@ -1,23 +1,12 @@
 import { CommandClient, VoiceConnection, VoiceChannel } from 'eris';
 import { Category } from 'logging-ts';
-import Stream from 'stream';
 import moment from 'moment-timezone';
 import { Core } from '../../..';
 import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
 import AudioUtils from '../../../Libs/audio';
 import AbortStream from '../../../Libs/abort';
 import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync } from 'fs';
-
-
-const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
-
-class Silence extends Stream.Readable {
-    _read() {
-        this.push(SILENCE_FRAME);
-        this.destroy();
-    }
-}
-
+import { Silence } from './Silence';
 export class DiscordVoice {
     private core: Core;
     private bot: CommandClient;

@@ -1,13 +1,13 @@
-import { CommandClient, Message, TextChannel, MessageFile, MessageContent } from 'eris';
+import { CommandClient, Message, TextChannel, PossiblyUncachedTextableChannel } from 'eris'; //MessageFile, MessageContent,
 import { Category } from 'logging-ts';
 import { DiscordVoice } from './Voice';
 import { Discord } from '../Core';
 import { SoundFx } from '../../../Core/SoundFX';
 import { Core } from '../../..';
 
-const ERR_NOT_IN_VOICE_CHANNEL = 'You are not in any voice channel.';
-const ERR_BOT_NOT_IN_VOICE_CHANNEL = 'Bot is not in this channel.';
-const ERR_NO_DATA = 'No data.';
+// const ERR_NOT_IN_VOICE_CHANNEL = 'You are not in any voice channel.';
+// const ERR_BOT_NOT_IN_VOICE_CHANNEL = 'Bot is not in this channel.';
+// const ERR_NO_DATA = 'No data.';
 
 export class DiscordText {
     private bot: CommandClient;
@@ -43,12 +43,12 @@ export class DiscordText {
     }
 
     private registerCommand() {
-        this.bot.registerCommand('download', this.commandDownload.bind(this), {
-            argsRequired: true,
-            description: 'Download user\'s voice',
-            guildOnly: true,
-            usage: '<userID>',
-        });
+        // this.bot.registerCommand('download', this.commandDownload.bind(this), {
+        //     argsRequired: true,
+        //     description: 'Download user\'s voice',
+        //     guildOnly: true,
+        //     usage: '<userID>',
+        // });
 
         this.bot.registerCommand('showList', this.commandShowList.bind(this), {
             description: 'Show sound list',
@@ -61,11 +61,11 @@ export class DiscordText {
         });
     }
 
-    private handleSoundPlay(msg: Message) {
+    private handleSoundPlay(msg: Message<PossiblyUncachedTextableChannel>) {
         if (!msg.member) return;
 
         const voiceChannelID = msg.member.voiceState.channelID;
-        if (voiceChannelID === undefined) return;
+        if (!voiceChannelID) return;
         if (this.audios[voiceChannelID] === undefined) return;
 
         msg.content.split('\n').forEach(async command => {
@@ -121,36 +121,36 @@ export class DiscordText {
         });
     }
 
-    private async commandDownload(msg: Message, args: string[]) {
-        if (!msg.member) return;
+    // private async commandDownload(msg: Message, args: string[]) {
+    //     if (!msg.member) return;
 
-        const voiceChannelID = msg.member.voiceState.channelID;
-        if (voiceChannelID === undefined) {
-            msg.channel.createMessage(this.genErrorMessage(ERR_NOT_IN_VOICE_CHANNEL));
-            return;
-        }
+    //     const voiceChannelID = msg.member.voiceState.channelID;
+    //     if (!voiceChannelID) {
+    //         msg.channel.createMessage(this.genErrorMessage(ERR_NOT_IN_VOICE_CHANNEL));
+    //         return;
+    //     }
 
-        if (this.audios[voiceChannelID] === undefined) {
-            msg.channel.createMessage(this.genErrorMessage(ERR_BOT_NOT_IN_VOICE_CHANNEL));
-            return;
-        }
+    //     if (this.audios[voiceChannelID] === undefined) {
+    //         msg.channel.createMessage(this.genErrorMessage(ERR_BOT_NOT_IN_VOICE_CHANNEL));
+    //         return;
+    //     }
 
-        const userID = args[0];
-        const buffer = this.audios[voiceChannelID].getUserMP3Buffer(userID);
-        if (buffer !== undefined) {
-            msg.channel.createMessage('', { file: buffer, name: `${userID}.mp3` } as MessageFile);
-        } else {
-            msg.channel.createMessage(this.genErrorMessage(ERR_NO_DATA));
-        }
-    }
+    //     const userID = args[0];
+    //     const buffer = this.audios[voiceChannelID].getUserMP3Buffer(userID);
+    //     if (buffer !== undefined) {
+    //         msg.channel.createMessage('', { file: buffer, name: `${userID}.mp3` } as MessageFile);
+    //     } else {
+    //         msg.channel.createMessage(this.genErrorMessage(ERR_NO_DATA));
+    //     }
+    // }
 
-    private genErrorMessage(msg: string) {
-        return {
-            embed: {
-                title: 'Error',
-                color: 13632027,
-                description: msg
-            }
-        } as MessageContent;
-    }
+    // private genErrorMessage(msg: string) {
+    //     return {
+    //         embed: {
+    //             title: 'Error',
+    //             color: 13632027,
+    //             description: msg
+    //         }
+    //     } as MessageContent;
+    // }
 }

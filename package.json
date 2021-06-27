@@ -22,14 +22,13 @@
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.51.1",
-    "tslint": "^6.1.3",
     "typescript": "^4.3.4"
   },
   "optionalDependencies": {
+    "@discordjs/opus": "0.5",
     "bufferutil": "^4.0.3",
     "erlpack": "github:abalabahaha/erlpack",
     "node-addon-api": "^4.0.0",
-    "sodium-native": "^3.2.1",
-    "zlib-sync": "^0.1.7"
+    "sodium-native": "^3.2.1"
   }
 }

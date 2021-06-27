@@ -7,6 +7,7 @@ import AudioUtils from '../../../Libs/audio';
 import AbortStream from '../../../Libs/abort';
 import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync } from 'fs';
 import { Silence } from './Silence';
+
 export class DiscordVoice {
     private core: Core;
     private bot: CommandClient;
@@ -141,21 +142,20 @@ export class DiscordVoice {
         }
     }
 
-    private stopSession(connection: VoiceConnection) {
+    private stopSession(channelID:string, connection: VoiceConnection) {
         connection.stopPlaying();
-        // this.playMixer = new LicsonMixer(16, 2, 48000);
-        // this.recvMixer = new LicsonMixer(16, 2, 48000);
-        // this.userMixers = {};
-        // this.clearStreams();
-        // this.userRawPCMStreams = {};
-        // this.userRawMP3Streams = {};
-        // this.userMP3Buffers = {};
-        // connection.removeAllListeners();
         this.recvMixer.stop();
         this.recvMixer = new LicsonMixer(16, 2, 48000);
+
+        // for (const key of Object.keys(this.userMixers)) {
+        //     if (!this.userMixers[key]) continue;
+        //     this.userMixers[key].destroy();
+        //     delete this.userMixers[key];
+        // }
+
         if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
         // clearInterval(this.clearStreamInterval);
-        if (connection.channelID) this.bot.leaveVoiceChannel(connection.channelID);
+        this.bot.leaveVoiceChannel(channelID);
     }
 
     // private clearStreams() {
@@ -174,19 +174,15 @@ export class DiscordVoice {
     private async joinVoiceChannel(channelID: string): Promise<VoiceConnection> {
         this.logger.info(`Connecting to ${channelID}...`);
         const connection = await this.bot.joinVoiceChannel(channelID);
-        // connection.on('warn', (message: string) => {
-        //     this.logger.warn(`Warning from ${channelID}: ${message}`);
-        // });
-        // const error = (err: Error) => {
-        //     this.stopSession(connection);
-        //         console.log(err)
-        //         setTimeout(() => {
-        //             this.startAudioSession(channelID);
-        //         }, 5 * 1000);
-        // };
-        // connection.once('error', error);
-        connection.once('disconnect', () => {
-            this.stopSession(connection);
+        connection.on('warn', (message: string) => {
+            this.logger.warn(`Warning from ${channelID}: ${message}`);
+        });
+        connection.on('error', err => {
+            this.logger.error(`Error from voice connection ${channelID}: ${err.message}`, err);
+        });
+        connection.once('disconnect', err => {
+            this.logger.error(`Error from voice connection ${channelID}: ${err.message}`, err);
+            this.stopSession(channelID, connection);
             setTimeout(() => {
                 this.startAudioSession(channelID);
             }, 5 * 1000);

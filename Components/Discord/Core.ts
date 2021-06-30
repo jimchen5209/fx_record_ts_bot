@@ -38,7 +38,7 @@ export class Discord {
         });
 
         // eslint-disable-next-line no-unused-expressions, @typescript-eslint/no-unused-expressions
-        new DiscordText(core, this, this.bot, this.logger);
+        new DiscordText(this.bot, this.logger);
 
         this.bot.connect();
     }

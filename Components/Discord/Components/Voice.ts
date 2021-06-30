@@ -3,22 +3,19 @@ import { Category } from 'logging-ts';
 import moment from 'moment-timezone';
 import { Core } from '../../..';
 import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
+import { EventEmitter } from 'events';
 import AudioUtils from '../../../Libs/audio';
 import AbortStream from '../../../Libs/abort';
 import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync } from 'fs';
 import { Silence } from './Silence';
 
-export class DiscordVoice {
+export class DiscordVoice extends EventEmitter {
     private core: Core;
     private bot: CommandClient;
     private logger: Category;
     private channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] };
     private recvMixer = new LicsonMixer(16, 2, 48000);
-    // private userMixers: { [key: string]: LicsonMixer } = {};
-    // private userRawPCMStreams: { [key: string]: Stream.PassThrough } = {};
-    // private userRawMP3Streams: { [key: string]: Stream.PassThrough } = {};
-    // private userMP3Buffers: { [key: string]: any[] } = {};
-    private telegramSendInterval: NodeJS.Timeout | undefined;
+    private userMixers: { [key: string]: LicsonMixer } = {};
 
     constructor(
         core: Core,
@@ -26,6 +23,8 @@ export class DiscordVoice {
         logger: Category,
         channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] }
     ) {
+        super();
+
         this.core = core;
         this.bot = bot;
         this.logger = logger;
@@ -34,38 +33,18 @@ export class DiscordVoice {
         this.startAudioSession(this.channelConfig.id);
     }
 
-    // public getUserMP3Buffer(userID: string) {
-    // return (this.userMP3Buffers[userID] !== undefined) ? Buffer.concat(this.userMP3Buffers[userID]) : undefined;
-    // }
-
     private startAudioSession(channelID: string) {
         this.joinVoiceChannel(channelID).then(connection => {
             connection.play(new Silence(), { format: 'opusPackets' });
             this.startRecording(connection);
             this.startSendRecord();
             this.setEndStreamEvents(connection);
-            // this.startClearStreamInterval();
         });
     }
 
-    // private startPlayMixer(connection: VoiceConnection) {
-    //     connection.play((this.playMixer as unknown as Stream.Readable), {
-    //         format: 'pcm',
-    //         voiceDataTimeout: -1
-    //     });
-    // }
-
-    // public playSound(sound: string) {
-    // this.logger.info(`Play ${sound} in voice channel ${this.channelConfig.id}} `);
-
-    // const playStream = AudioUtils.soundFileStreamGenerator(sound, this.core.config.debug);
-    // AudioUtils.addStreamToChannelPlayMixer(playStream, this.playMixer);
-    // }
-
     private startRecording(connection: VoiceConnection) {
         connection.receive('pcm').on('data', (data, user) => {
-            // if (!user || this.channelConfig.ignoreUsers.includes(user)) return;
-            if (!user) return;
+            if (!user || this.channelConfig.ignoreUsers.includes(user)) return;
 
             let source = this.recvMixer.getSources(user)[0];
             if (!source) {
@@ -88,35 +67,56 @@ export class DiscordVoice {
     // }
 
     private startSendRecord() {
-        if (this.channelConfig.fileDest.type === 'telegram' && this.channelConfig.fileDest.id !== '' && this.core.telegram) {
-            const mp3Stream = AudioUtils.generatePCMtoMP3Stream(this.recvMixer, this.core.config.debug);
+        const mp3Stream = AudioUtils.generatePCMtoMP3Stream(this.recvMixer, this.core.config.debug);
 
-            let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+        let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
 
-            if (existsSync(`temp/${this.channelConfig.id}`)) rmdirSync(`temp/${this.channelConfig.id}`, { recursive: true });
-            mkdirSync(`temp/${this.channelConfig.id}`);
+        if (existsSync(`temp/${this.channelConfig.id}`)) rmdirSync(`temp/${this.channelConfig.id}`, { recursive: true });
+        mkdirSync(`temp/${this.channelConfig.id}`);
 
-            let writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
+        let writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
+        mp3Stream.pipe(writeStream);
+        const endStream = () => {
+            mp3Stream.unpipe();
+            writeStream.end();
+        };
+
+        const restartStream = () => {
+            mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+            writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
             mp3Stream.pipe(writeStream);
+        };
 
-            this.telegramSendInterval = setInterval(() => {
-                mp3Stream.unpipe();
-                writeStream.end();
-                const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
-                const caption = `${mp3Start} -> ${mp3End} \n${moment().tz('Asia/Taipei').format('#YYYYMMDD #hhmm #YYYY')}`;
+        const sendRecordFile = () => {
+            endStream();
+            const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+            const time = moment().tz('Asia/Taipei');
+            const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')}`;
 
+            if (this.channelConfig.fileDest.type === 'telegram' && this.channelConfig.fileDest.id !== '' && this.core.telegram) {
                 this.logger.info(`Sending ${mp3Start}.mp3 of ${this.channelConfig.id} to telegram ${this.channelConfig.fileDest.id}`);
                 if (this.core.telegram) this.core.telegram.sendAudio(this.channelConfig.fileDest.id, `temp/${this.channelConfig.id}/${mp3Start}.mp3`, caption).then(i => unlinkSync(i));
-                mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
-                writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
-                mp3Stream.pipe(writeStream);
-            }, 60 * 1000);
-        }
+            }
+        };
+
+        const sendInterval = setInterval(() => {
+            sendRecordFile();
+            restartStream();
+        }, 60 * 1000);
+
+        this.on('endSession', () => {
+            clearInterval(sendInterval);
+            this.logger.info('Sending rest of recording...');
+            sendRecordFile();
+        });
     }
 
     private stopSession(channelID:string, connection: VoiceConnection) {
         connection.stopPlaying();
         this.recvMixer.stop();
+
+        this.emit('endSession');
+
         this.recvMixer = new LicsonMixer(16, 2, 48000);
 
         // for (const key of Object.keys(this.userMixers)) {
@@ -125,7 +125,6 @@ export class DiscordVoice {
         //     delete this.userMixers[key];
         // }
 
-        if (this.telegramSendInterval !== undefined) clearInterval(this.telegramSendInterval);
         this.bot.leaveVoiceChannel(channelID);
     }
 
@@ -149,8 +148,7 @@ export class DiscordVoice {
     }
 
     private endStream(user: string) {
-        const source = this.recvMixer.getSources(user)[0];
-        if (source) source.stream.end();
+        this.recvMixer.getSources(user)[0]?.stream.end();
     }
 
     private setEndStreamEvents(connection: VoiceConnection) {

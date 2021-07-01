@@ -6,14 +6,14 @@ import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
 import { EventEmitter } from 'events';
 import AudioUtils from '../../../Libs/audio';
 import AbortStream from '../../../Libs/abort';
-import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync } from 'fs';
+import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync, WriteStream } from 'fs';
 import { Silence } from './Silence';
 
 export class DiscordVoice extends EventEmitter {
     private core: Core;
     private bot: CommandClient;
     private logger: Category;
-    private channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] };
+    private channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], ignoreUsers: string[] };
     private recvMixer = new LicsonMixer(16, 2, 48000);
     private userMixers: { [key: string]: LicsonMixer } = {};
 
@@ -21,7 +21,7 @@ export class DiscordVoice extends EventEmitter {
         core: Core,
         bot: CommandClient,
         logger: Category,
-        channelConfig: { id: string, fileDest: { type: string, id: string }, ignoreUsers: string[] }
+        channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean  }[], ignoreUsers: string[] }
     ) {
         super();
 
@@ -69,46 +69,58 @@ export class DiscordVoice extends EventEmitter {
     private startSendRecord() {
         const mp3Stream = AudioUtils.generatePCMtoMP3Stream(this.recvMixer, this.core.config.debug);
 
-        let mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+        let mp3Start = '';
+        let finalMp3Start = '';
+        let writeStream: WriteStream;
 
         if (existsSync(`temp/${this.channelConfig.id}`)) rmdirSync(`temp/${this.channelConfig.id}`, { recursive: true });
         mkdirSync(`temp/${this.channelConfig.id}`);
 
-        let writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
-        mp3Stream.pipe(writeStream);
         const endStream = () => {
             mp3Stream.unpipe();
             writeStream.end();
+            finalMp3Start = mp3Start;
+            mp3Start = '';
         };
 
-        const restartStream = () => {
+        const startStream = () => {
             mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
             writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
             mp3Stream.pipe(writeStream);
         };
 
-        const sendRecordFile = () => {
-            endStream();
+        const sendRecordFile = async () => {
             const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
             const time = moment().tz('Asia/Taipei');
             const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')}`;
 
-            if (this.channelConfig.fileDest.type === 'telegram' && this.channelConfig.fileDest.id !== '' && this.core.telegram) {
-                this.logger.info(`Sending ${mp3Start}.mp3 of ${this.channelConfig.id} to telegram ${this.channelConfig.fileDest.id}`);
-                if (this.core.telegram) this.core.telegram.sendAudio(this.channelConfig.fileDest.id, `temp/${this.channelConfig.id}/${mp3Start}.mp3`, caption).then(i => unlinkSync(i));
+            for (const element of this.channelConfig.fileDest) {
+                if (element.type === 'telegram' && element.id !== '' && this.core.telegram) {
+                    if (element.sendAll) {
+                        this.logger.info(`Sending ${finalMp3Start}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
+                        if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${finalMp3Start}.mp3`, caption);
+                    }
+                }
             }
+
+            unlinkSync(`temp/${this.channelConfig.id}/${finalMp3Start}.mp3`);
+            finalMp3Start = '';
         };
 
         const sendInterval = setInterval(() => {
+            endStream();
+            startStream();
             sendRecordFile();
-            restartStream();
         }, 60 * 1000);
 
         this.on('endSession', () => {
             clearInterval(sendInterval);
             this.logger.info('Sending rest of recording...');
+            endStream();
             sendRecordFile();
         });
+
+        startStream();
     }
 
     private stopSession(channelID:string, connection: VoiceConnection) {

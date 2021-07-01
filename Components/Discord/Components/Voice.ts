@@ -2,7 +2,7 @@ import { CommandClient, VoiceConnection, VoiceChannel } from 'eris';
 import { Category } from 'logging-ts';
 import moment from 'moment-timezone';
 import { Core } from '../../..';
-import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
+import LicsonMixer, { Readable } from '../../../Libs/LicsonMixer/mixer';
 import { EventEmitter } from 'events';
 import AudioUtils from '../../../Libs/audio';
 import AbortStream from '../../../Libs/abort';
@@ -53,63 +53,130 @@ export class DiscordVoice extends EventEmitter {
             }
             source.stream.write(data);
 
-            // if (!this.userMixers[user]) this.newPerUserMixer(user);
+            if (!this.userMixers[user]) this.newPerUserMixer(user);
 
-            // let perUserSource = this.userMixers[user].getSources(user)[0];
-            // if (!source) perUserSource = this.userMixers[user].addSource(new AbortStream(64 * 1000 * 8, 64 * 1000 * 4), user);
-            // perUserSource.stream.write(data);
+            let perUserSource = this.userMixers[user].getSources(user)[0];
+            if (!perUserSource) perUserSource = this.userMixers[user].addSource(new AbortStream(64 * 1000 * 8, 64 * 1000 * 4), user);
+            perUserSource.stream.write(data);
         });
     }
 
-    // private newPerUserMixer(user: string) {
-    //     this.logger.info(`New per user mixer ${user} for ${this.channelConfig.id} created.`);
-    //     this.userMixers[user] = new LicsonMixer(16, 2, 48000);
-    // }
+    private newPerUserMixer(user: string) {
+        this.logger.info(`New per user mixer ${user} for ${this.channelConfig.id} created.`);
+        this.userMixers[user] = new LicsonMixer(16, 2, 48000);
+        this.emit('newUserStream', user);
+    }
 
     private startSendRecord() {
         const mp3Stream = AudioUtils.generatePCMtoMP3Stream(this.recvMixer, this.core.config.debug);
+        const perUserMp3Stream: { [key: string]: Readable } = {};
+
+        for (const user of Object.keys(this.userMixers)) {
+            if (!this.userMixers[user]) continue;
+
+            perUserMp3Stream[user] = AudioUtils.generatePCMtoMP3Stream(this.userMixers[user], this.core.config.debug);
+        }
 
         let mp3Start = '';
         let finalMp3Start = '';
         let writeStream: WriteStream;
+        const perUserWriteStream: { [key: string]: WriteStream } = {};
 
         if (existsSync(`temp/${this.channelConfig.id}`)) rmdirSync(`temp/${this.channelConfig.id}`, { recursive: true });
         mkdirSync(`temp/${this.channelConfig.id}`);
 
-        const endStream = () => {
-            mp3Stream.unpipe();
-            writeStream.end();
-            finalMp3Start = mp3Start;
-            mp3Start = '';
+        const endStream = (user: string | undefined = undefined) => {
+            if (!user) {
+                mp3Stream.unpipe();
+                writeStream.end();
+
+                for (const element of Object.keys(this.userMixers)) {
+                    if (!this.userMixers[element]) continue;
+                    if (perUserMp3Stream[element]) perUserMp3Stream[element].unpipe();
+                    if (perUserWriteStream[element]) perUserWriteStream[element].end();
+                    delete perUserWriteStream[element];
+                }
+
+                finalMp3Start = mp3Start;
+                mp3Start = '';
+            }
+            else
+            {
+                if (perUserMp3Stream[user]) perUserMp3Stream[user].unpipe();
+                if (perUserWriteStream[user]) perUserWriteStream[user].end();
+                delete perUserWriteStream[user];
+            }
         };
 
-        const startStream = () => {
-            mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
-            writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
-            mp3Stream.pipe(writeStream);
+        const startStream = (user: string | undefined = undefined) => {
+            if (!user) {
+                mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+                writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
+                mp3Stream.pipe(writeStream);
+
+                for (const element of Object.keys(this.userMixers)) {
+                    if (!this.userMixers[element] || !perUserMp3Stream[element]) continue;
+                    if (this.userMixers[element].getSources(user).length === 0) continue;
+                    perUserWriteStream[element] = createWriteStream(`temp/${this.channelConfig.id}/${element}-${mp3Start}.mp3`);
+                    perUserMp3Stream[element].pipe(perUserWriteStream[element]);
+                }
+            }
+            else {
+                if (!perUserMp3Stream[user]) return;
+                perUserWriteStream[user] = createWriteStream(`temp/${this.channelConfig.id}/${user}-${mp3Start}.mp3`);
+                perUserMp3Stream[user].pipe(perUserWriteStream[user]);
+            }
         };
 
         const sendRecordFile = async () => {
             const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
             const time = moment().tz('Asia/Taipei');
-            const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')}`;
 
             for (const element of this.channelConfig.fileDest) {
                 if (element.type === 'telegram' && element.id !== '' && this.core.telegram) {
                     if (element.sendAll) {
                         this.logger.info(`Sending ${finalMp3Start}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
+                        const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')}`;
                         if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${finalMp3Start}.mp3`, caption);
+                    }
+                    if (element.sendPerUser) {
+                        for (const user of Object.keys(this.userMixers)) {
+                            if (existsSync(`temp/${this.channelConfig.id}/${user}-${finalMp3Start}.mp3`)) {
+                                this.logger.info(`Sending ${user}-${finalMp3Start}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
+                                const caption = `Start:${mp3Start}\nEnd:${mp3End}\nUser:${user}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')} #User${user}`;
+                                if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${user}-${finalMp3Start}.mp3`, caption);
+                            }
+                        }
                     }
                 }
                 if (element.type === 'discord' && element.id !== '') {
                     if (element.sendAll) {
                         this.logger.info(`Sending ${finalMp3Start}.mp3 of ${this.channelConfig.id} to discord ${element.id}`);
+                        const caption = `Start:${mp3Start}\nEnd:${mp3End}`;
                         await this.bot.createMessage(element.id, caption, { name: `${finalMp3Start}.mp3`, file: readFileSync(`temp/${this.channelConfig.id}/${finalMp3Start}.mp3`) });
+                    }
+                    if (element.sendPerUser) {
+                        for (const user of Object.keys(this.userMixers)) {
+                            if (existsSync(`temp/${this.channelConfig.id}/${user}-${finalMp3Start}.mp3`)) {
+                                this.logger.info(`Sending ${user}-${finalMp3Start}.mp3 of ${this.channelConfig.id} to discord ${element.id}`);
+                                const caption = `Start:${mp3Start}\nEnd:${mp3End}\nUser:${user}`;
+                                await this.bot.createMessage(element.id, caption, { name: `${user}-${finalMp3Start}.mp3`, file: readFileSync(`temp/${this.channelConfig.id}/${user}-${finalMp3Start}.mp3`) });
+                            }
+                        }
                     }
                 }
             }
 
             unlinkSync(`temp/${this.channelConfig.id}/${finalMp3Start}.mp3`);
+            for (const user of Object.keys(this.userMixers)) {
+                if (existsSync(`temp/${this.channelConfig.id}/${user}-${finalMp3Start}.mp3`)) {
+                    unlinkSync(`temp/${this.channelConfig.id}/${user}-${finalMp3Start}.mp3`);
+                }
+                if (this.userMixers[user]?.getSources(user).length === 0) {
+                    this.logger.info(`Remove unused per user mixer ${user} for ${this.channelConfig.id}`);
+                    delete this.userMixers[user];
+                }
+            }
             finalMp3Start = '';
         };
 
@@ -126,6 +193,15 @@ export class DiscordVoice extends EventEmitter {
             sendRecordFile();
         });
 
+        this.on('newUserStream', (user: string) => {
+            perUserMp3Stream[user] = AudioUtils.generatePCMtoMP3Stream(this.userMixers[user], this.core.config.debug);
+            startStream(user);
+        });
+
+        this.on('userEndStream', (user: string) => {
+            endStream(user);
+        });
+
         startStream();
     }
 
@@ -137,11 +213,11 @@ export class DiscordVoice extends EventEmitter {
 
         this.recvMixer = new LicsonMixer(16, 2, 48000);
 
-        // for (const key of Object.keys(this.userMixers)) {
-        //     if (!this.userMixers[key]) continue;
-        //     this.userMixers[key].destroy();
-        //     delete this.userMixers[key];
-        // }
+        for (const key of Object.keys(this.userMixers)) {
+            if (!this.userMixers[key]) continue;
+            this.userMixers[key].stop();
+            delete this.userMixers[key];
+        }
 
         this.bot.leaveVoiceChannel(channelID);
     }
@@ -167,6 +243,9 @@ export class DiscordVoice extends EventEmitter {
 
     private endStream(user: string) {
         this.recvMixer.getSources(user)[0]?.stream.end();
+        // this.userMixers[user]?.getSources(user)[0]?.stream.end();
+        this.userMixers[user]?.stop();
+        this.emit('userEndStream', user);
     }
 
     private setEndStreamEvents(connection: VoiceConnection) {

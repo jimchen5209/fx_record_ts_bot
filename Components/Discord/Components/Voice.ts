@@ -6,7 +6,7 @@ import LicsonMixer from '../../../Libs/LicsonMixer/mixer';
 import { EventEmitter } from 'events';
 import AudioUtils from '../../../Libs/audio';
 import AbortStream from '../../../Libs/abort';
-import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync, WriteStream } from 'fs';
+import { createWriteStream, mkdirSync, unlinkSync, existsSync, rmdirSync, WriteStream, readFileSync } from 'fs';
 import { Silence } from './Silence';
 
 export class DiscordVoice extends EventEmitter {
@@ -99,6 +99,12 @@ export class DiscordVoice extends EventEmitter {
                     if (element.sendAll) {
                         this.logger.info(`Sending ${finalMp3Start}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
                         if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${finalMp3Start}.mp3`, caption);
+                    }
+                }
+                if (element.type === 'discord' && element.id !== '') {
+                    if (element.sendAll) {
+                        this.logger.info(`Sending ${finalMp3Start}.mp3 of ${this.channelConfig.id} to discord ${element.id}`);
+                        await this.bot.createMessage(element.id, caption, { name: `${finalMp3Start}.mp3`, file: readFileSync(`temp/${this.channelConfig.id}/${finalMp3Start}.mp3`) });
                     }
                 }
             }

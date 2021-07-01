@@ -191,6 +191,7 @@ export class DiscordVoice extends EventEmitter {
             this.logger.info('Sending rest of recording...');
             endStream();
             sendRecordFile();
+            this.removeAllListeners();
         });
 
         this.on('newUserStream', (user: string) => {
@@ -231,8 +232,12 @@ export class DiscordVoice extends EventEmitter {
         connection.on('error', err => {
             this.logger.error(`Error from voice connection ${channelID}: ${err.message}`, err);
         });
+        connection.once('ready', () => {
+            console.error('Voice connection reconnected.');
+            this.bot.leaveVoiceChannel(channelID);
+        });
         connection.once('disconnect', err => {
-            this.logger.error(`Error from voice connection ${channelID}: ${err.message}`, err);
+            this.logger.error(`Error from voice connection ${channelID}: ${err?.message}`, err);
             this.stopSession(channelID, connection);
             setTimeout(() => {
                 this.startAudioSession(channelID);

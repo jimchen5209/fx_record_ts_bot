@@ -13,7 +13,7 @@ export class DiscordVoice extends EventEmitter {
     private core: Core;
     private bot: CommandClient;
     private logger: Category;
-    private channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], ignoreUsers: string[] };
+    private channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], sendIntervalSecond: number, ignoreUsers: string[] };
     private recvMixer = new LicsonMixer(16, 2, 48000);
     private userMixers: { [key: string]: LicsonMixer } = {};
 
@@ -21,7 +21,7 @@ export class DiscordVoice extends EventEmitter {
         core: Core,
         bot: CommandClient,
         logger: Category,
-        channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean  }[], ignoreUsers: string[] }
+        channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], sendIntervalSecond: number, ignoreUsers: string[] }
     ) {
         super();
 
@@ -117,7 +117,7 @@ export class DiscordVoice extends EventEmitter {
             endStream();
             startStream();
             sendRecordFile();
-        }, 60 * 1000);
+        }, this.channelConfig.sendIntervalSecond * 1000);
 
         this.on('endSession', () => {
             clearInterval(sendInterval);

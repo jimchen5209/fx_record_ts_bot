@@ -3,7 +3,7 @@ import { Category } from 'logging-ts';
 import { Core } from '..';
 
 export class Config {
-    public discord: { token: string, channels: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], ignoreUsers: string[] }[], admins: string[] };
+    public discord: { token: string, channels: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], sendIntervalSecond: number, ignoreUsers: string[] }[], admins: string[] };
     public telegram: { token: string, admins: string[], baseApiUrl: string|undefined };
     public debug: boolean;
     private logger: Category;
@@ -11,7 +11,7 @@ export class Config {
     constructor(core: Core) {
         this.logger = new Category('Config', core.mainLogger);
         this.logger.info('Loading Config...');
-        const discordDefaultConfig = { token: '', channels: [{ id: '', fileDest: [{ type: 'telegram', id: '', sendAll: true, sendPerUser: true }], ignoreUsers: [] }], admins: [] };
+        const discordDefaultConfig = { token: '', channels: [{ id: '', fileDest: [{ type: 'telegram', id: '', sendAll: true, sendPerUser: true }], sendIntervalSecond: 60, ignoreUsers: [] }], admins: [] };
         const telegramDefaultConfig = { token: '', admins: [], baseApiUrl: undefined };
         if (fs.existsSync('./config.json')) {
             const config = JSON.parse(fs.readFileSync('config.json', { encoding: 'utf-8' }));

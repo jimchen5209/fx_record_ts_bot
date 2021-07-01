@@ -20,9 +20,9 @@ export class Core {
         } catch (error) {
             this.mainLogger.error('Error occurred when connecting to discord:', error);
         }
+
         setInterval(() => {
-        //     global.gc();
-            Object.entries(process.memoryUsage()).forEach(item => console.log(`${item[0]}: ${(item[1] / 1024 / 1024).toFixed(4)} MiB`));
+            Object.entries(process.memoryUsage()).forEach(item => { if (this.config.debug) console.log(`${item[0]}: ${(item[1] / 1024 / 1024).toFixed(4)} MiB`); });
         }, 30 * 1000);
     }
 }

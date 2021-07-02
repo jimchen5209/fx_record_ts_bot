@@ -14,10 +14,9 @@
   },
   "description": "",
   "dependencies": {
+    "dayjs": "^1.10.5",
     "eris": "^0.15.1",
     "logging-ts": "git+https://github.com/jimchen5209/Logging-TS.git",
-    "moment": "^2.29.1",
-    "moment-timezone": "^0.5.33",
     "node-telegram-bot-api": "^0.53.0",
     "opusscript": "^0.0.8"
   },

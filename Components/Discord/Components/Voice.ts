@@ -1,6 +1,8 @@
 import { CommandClient, VoiceConnection, VoiceChannel } from 'eris';
 import { Category } from 'logging-ts';
-import moment from 'moment-timezone';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { Core } from '../../..';
 import LicsonMixer, { Readable } from '../../../Libs/LicsonMixer/mixer';
 import { EventEmitter } from 'events';
@@ -13,7 +15,7 @@ export class DiscordVoice extends EventEmitter {
     private core: Core;
     private bot: CommandClient;
     private logger: Category;
-    private channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], sendIntervalSecond: number, ignoreUsers: string[] };
+    private channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], timeZone: string, sendIntervalSecond: number, ignoreUsers: string[] };
     private recvMixer = new LicsonMixer(16, 2, 48000);
     private userMixers: { [key: string]: LicsonMixer } = {};
 
@@ -21,7 +23,7 @@ export class DiscordVoice extends EventEmitter {
         core: Core,
         bot: CommandClient,
         logger: Category,
-        channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], sendIntervalSecond: number, ignoreUsers: string[] }
+        channelConfig: { id: string, fileDest: { type: string, id: string, sendAll: boolean, sendPerUser: boolean }[], timeZone: string, sendIntervalSecond: number, ignoreUsers: string[] }
     ) {
         super();
 
@@ -29,6 +31,10 @@ export class DiscordVoice extends EventEmitter {
         this.bot = bot;
         this.logger = logger;
         this.channelConfig = channelConfig;
+
+        // setup dayjs
+        dayjs.extend(utc);
+        dayjs.extend(timezone);
 
         this.startAudioSession(this.channelConfig.id);
     }
@@ -110,7 +116,7 @@ export class DiscordVoice extends EventEmitter {
 
         const startStream = (user: string | undefined = undefined) => {
             if (!user) {
-                mp3Start = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
+                mp3Start = dayjs.utc().tz(this.channelConfig.timeZone).format('YYYY-MM-DD HH-mm-ss');
                 writeStream = createWriteStream(`temp/${this.channelConfig.id}/${mp3Start}.mp3`);
                 mp3Stream.pipe(writeStream);
 
@@ -130,21 +136,21 @@ export class DiscordVoice extends EventEmitter {
 
         const sendRecordFile = async () => {
             const mp3StartToSend = finalMp3Start;
-            const mp3End = moment().tz('Asia/Taipei').format('YYYY-MM-DD hh-mm-ss');
-            const time = moment().tz('Asia/Taipei');
+            const mp3End = dayjs.utc().tz(this.channelConfig.timeZone).format('YYYY-MM-DD HH-mm-ss');
+            const time = dayjs.utc().tz(this.channelConfig.timeZone);
 
             for (const element of this.channelConfig.fileDest) {
                 if (element.type === 'telegram' && element.id !== '' && this.core.telegram) {
                     if (element.sendAll) {
                         this.logger.info(`Sending ${mp3StartToSend}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
-                        const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')}`;
+                        const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('HHmm')} #Year${time.format('YYYY')}`;
                         if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${mp3StartToSend}.mp3`, caption);
                     }
                     if (element.sendPerUser) {
                         for (const user of Object.keys(this.userMixers)) {
                             if (existsSync(`temp/${this.channelConfig.id}/${user}-${mp3StartToSend}.mp3`)) {
                                 this.logger.info(`Sending ${user}-${mp3StartToSend}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
-                                const caption = `Start:${mp3Start}\nEnd:${mp3End}\nUser:${user}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('hhmm')} #Year${time.format('YYYY')} #User${user}`;
+                                const caption = `Start:${mp3Start}\nEnd:${mp3End}\nUser:${user}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('HHmm')} #Year${time.format('YYYY')} #User${user}`;
                                 if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${user}-${mp3StartToSend}.mp3`, caption);
                             }
                         }

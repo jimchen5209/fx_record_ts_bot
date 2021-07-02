@@ -28,12 +28,12 @@ export class Telegram {
                 file,
                 { caption }
             );
+            this.logger.info(`File sent to ${chatID}: ${file}`);
         } catch (err) {
-            this.logger.error(err.message, err);
+            this.logger.error(`File ${file} send failed:${err.message}`, err);
             if (this.config.debug) console.log(err);
         }
 
-        this.logger.info(`File sent to ${chatID}: ${file}`);
         return file;
     }
 }

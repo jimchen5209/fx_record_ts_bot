@@ -3,6 +3,7 @@ import { Category } from 'logging-ts';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { Core } from '../../..';
 import LicsonMixer, { Readable } from '../../../Libs/LicsonMixer/mixer';
 import { EventEmitter } from 'events';
@@ -35,6 +36,7 @@ export class DiscordVoice extends EventEmitter {
         // setup dayjs
         dayjs.extend(utc);
         dayjs.extend(timezone);
+        dayjs.extend(customParseFormat);
 
         this.startAudioSession(this.channelConfig.id);
     }

@@ -137,20 +137,20 @@ export class DiscordVoice extends EventEmitter {
         const sendRecordFile = async () => {
             const mp3StartToSend = finalMp3Start;
             const mp3End = dayjs.utc().tz(this.channelConfig.timeZone).format('YYYY-MM-DD HH-mm-ss');
-            const time = dayjs.utc().tz(this.channelConfig.timeZone);
+            const time = dayjs.tz(mp3StartToSend, 'YYYY-MM-DD HH-mm-ss', this.channelConfig.timeZone);
 
             for (const element of this.channelConfig.fileDest) {
                 if (element.type === 'telegram' && element.id !== '' && this.core.telegram) {
                     if (element.sendAll) {
                         this.logger.info(`Sending ${mp3StartToSend}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
-                        const caption = `Start:${mp3Start}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('HHmm')} #Year${time.format('YYYY')}`;
+                        const caption = `Start:${mp3StartToSend}\nEnd:${mp3End}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('HHmm')} #Year${time.format('YYYY')}`;
                         if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${mp3StartToSend}.mp3`, caption);
                     }
                     if (element.sendPerUser) {
                         for (const user of Object.keys(this.userMixers)) {
                             if (existsSync(`temp/${this.channelConfig.id}/${user}-${mp3StartToSend}.mp3`)) {
                                 this.logger.info(`Sending ${user}-${mp3StartToSend}.mp3 of ${this.channelConfig.id} to telegram ${element.id}`);
-                                const caption = `Start:${mp3Start}\nEnd:${mp3End}\nUser:${user}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('HHmm')} #Year${time.format('YYYY')} #User${user}`;
+                                const caption = `Start:${mp3StartToSend}\nEnd:${mp3End}\nUser:${user}\n\n#Date${time.format('YYYYMMDD')} #Time${time.format('HHmm')} #Year${time.format('YYYY')} #User${user}`;
                                 if (this.core.telegram) await this.core.telegram.sendAudio(element.id, `temp/${this.channelConfig.id}/${user}-${mp3StartToSend}.mp3`, caption);
                             }
                         }
@@ -159,14 +159,14 @@ export class DiscordVoice extends EventEmitter {
                 if (element.type === 'discord' && element.id !== '') {
                     if (element.sendAll) {
                         this.logger.info(`Sending ${mp3StartToSend}.mp3 of ${this.channelConfig.id} to discord ${element.id}`);
-                        const caption = `Start:${mp3Start}\nEnd:${mp3End}`;
+                        const caption = `Start:${mp3StartToSend}\nEnd:${mp3End}`;
                         await this.bot.createMessage(element.id, caption, { name: `${mp3StartToSend}.mp3`, file: readFileSync(`temp/${this.channelConfig.id}/${mp3StartToSend}.mp3`) });
                     }
                     if (element.sendPerUser) {
                         for (const user of Object.keys(this.userMixers)) {
                             if (existsSync(`temp/${this.channelConfig.id}/${user}-${mp3StartToSend}.mp3`)) {
                                 this.logger.info(`Sending ${user}-${mp3StartToSend}.mp3 of ${this.channelConfig.id} to discord ${element.id}`);
-                                const caption = `Start:${mp3Start}\nEnd:${mp3End}\nUser:${user}`;
+                                const caption = `Start:${mp3StartToSend}\nEnd:${mp3End}\nUser:${user}`;
                                 await this.bot.createMessage(element.id, caption, { name: `${user}-${mp3StartToSend}.mp3`, file: readFileSync(`temp/${this.channelConfig.id}/${user}-${mp3StartToSend}.mp3`) });
                             }
                         }
